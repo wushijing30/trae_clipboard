@@ -13,6 +13,7 @@ class ClipboardHistoryWidget(QWidget):
         super().__init__()
         self.clipboard = clipboard
         self.monitor = monitor
+        self._updating_categories = False  # 添加标志位
         self.setup_ui()
         self.setup_connections()
         self.load_history()
@@ -61,6 +62,7 @@ class ClipboardHistoryWidget(QWidget):
 
     def load_history(self):
         # 加载历史记录
+        logger.info("加载剪贴板历史记录")
         items = self.monitor.get_history()
         self.history_list.clear()
         for item in items:
@@ -105,18 +107,22 @@ class ClipboardHistoryWidget(QWidget):
 
     def _update_categories(self):
         # 更新分类下拉框
-        current_text = self.category_combo.currentText()
-        self.category_combo.clear()
-        self.category_combo.addItem('全部')
-        
-        categories = self.monitor.session.query(Category).all()
-        for category in categories:
-            self.category_combo.addItem(category.name)
-
-        # 恢复之前的选择
-        index = self.category_combo.findText(current_text)
-        if index >= 0:
-            self.category_combo.setCurrentIndex(index)
+        self._updating_categories = True  # 设置标志位
+        try:
+            current_text = self.category_combo.currentText()
+            self.category_combo.clear()
+            self.category_combo.addItem('全部')
+            
+            categories = self.monitor.session.query(Category).all()
+            for category in categories:
+                self.category_combo.addItem(category.name)
+            
+            # 恢复之前的选择
+            index = self.category_combo.findText(current_text)
+            if index >= 0:
+                self.category_combo.setCurrentIndex(index)
+        finally:
+            self._updating_categories = False  # 重置标志位
 
     @pyqtSlot(ClipboardItem)
     def on_clipboard_changed(self, item: ClipboardItem):
@@ -128,6 +134,7 @@ class ClipboardHistoryWidget(QWidget):
         # 复制选中的内容到剪贴板
         current_item = self.history_list.currentItem()
         if not current_item:
+            logger.warning("未选中任何项目")
             return
 
         widget = self.history_list.itemWidget(current_item)
@@ -135,15 +142,20 @@ class ClipboardHistoryWidget(QWidget):
             content_label = widget.findChild(QLabel)
             if content_label:
                 self.clipboard.setText(content_label.text())
+                logger.info("已复制选中内容到剪贴板")
 
     def delete_selected_item(self):
         # 删除选中的记录
         current_item = self.history_list.currentItem()
         if current_item:
             self.history_list.takeItem(self.history_list.row(current_item))
+            logger.info("已删除选中的历史记录")
+        else:
+            logger.warning("未选中任何项目")
 
     def filter_history(self, text: str):
         # 根据搜索文本过滤历史记录
+        logger.info(f"根据关键词过滤历史记录: {text}")
         for i in range(self.history_list.count()):
             item = self.history_list.item(i)
             widget = self.history_list.itemWidget(item)
@@ -156,6 +168,10 @@ class ClipboardHistoryWidget(QWidget):
 
     def filter_by_category(self, category_name: str):
         # 根据分类过滤历史记录
+        if self._updating_categories:  # 如果正在更新分类，则不执行过滤
+            return
+            
+        logger.info(f"根据分类过滤历史记录: {category_name}")
         if category_name == '全部':
             self.load_history()
         else:

@@ -8,6 +8,7 @@ from typing import Optional, List
 from PyQt6.QtCore import QObject, pyqtSignal
 from PyQt6.QtGui import QClipboard, QImage
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 from loguru import logger
 
 from models import ClipboardItem, ContentType, Category
@@ -45,6 +46,8 @@ class ClipboardMonitor(QObject):
             if not content:
                 return
 
+            logger.info(f"检测到剪贴板内容变化，类型: {content_type.value}")
+
             # 创建新的剪贴板记录
             item = ClipboardItem(
                 content=content,
@@ -56,10 +59,12 @@ class ClipboardMonitor(QObject):
             category = self._categorize_content(content, content_type)
             if category:
                 item.category = category
+                logger.info(f"内容已分类为: {category.name}")
 
             # 保存到数据库
             self.session.add(item)
             self.session.commit()
+            logger.info("剪贴板内容已保存到数据库")
 
             # 发送信号通知UI更新
             self.content_changed.emit(item)
@@ -88,10 +93,10 @@ class ClipboardMonitor(QObject):
                 return str(urls[0].toString()), ContentType.URL
 
         if mime_data.hasText():
-            text = mime_data.text()
-            if self._is_code(text):
-                return text, ContentType.CODE
-            return text, ContentType.TEXT
+            text_content = mime_data.text()
+            if self._is_code(text_content):
+                return text_content, ContentType.CODE
+            return text_content, ContentType.TEXT
 
         return "", ContentType.OTHER
 
@@ -116,7 +121,7 @@ class ClipboardMonitor(QObject):
         for category_name, keywords in categories.items():
             if any(keyword in content.lower() for keyword in keywords):
                 # 检查分类是否已存在
-                category = self.session.query(Category).filter_by(name=category_name).first()
+                category = self.session.query(Category).filter(Category.name == category_name).first()
                 if not category:
                     category = Category(name=category_name)
                     self.session.add(category)
@@ -127,15 +132,49 @@ class ClipboardMonitor(QObject):
 
     def get_history(self, limit: int = 50) -> List[ClipboardItem]:
         """获取剪贴板历史记录"""
-        return self.session.query(ClipboardItem)\
-            .order_by(ClipboardItem.created_at.desc())\
-            .limit(limit)\
-            .all()
+        try:
+            logger.info(f"获取最近 {limit} 条历史记录")
+            result = self.session.query(ClipboardItem.id, ClipboardItem.content, ClipboardItem.content_type,
+                                      ClipboardItem.created_at, ClipboardItem.device_id, ClipboardItem.category_id)\
+                .order_by(ClipboardItem.id.desc())\
+                .limit(limit)\
+                .all()
+            return [ClipboardItem(
+                id=row.id,
+                content=row.content,
+                content_type=row.content_type,
+                created_at=row.created_at,
+                device_id=row.device_id,
+                category_id=row.category_id
+            ) for row in result]
+        except Exception as e:
+            logger.error(f"获取历史记录时出错: {str(e)}")
+            return []
 
     def get_by_category(self, category_name: str) -> List[ClipboardItem]:
         """按分类获取剪贴板记录"""
-        return self.session.query(ClipboardItem)\
-            .join(Category)\
-            .filter(Category.name == category_name)\
-            .order_by(ClipboardItem.created_at.desc())\
-            .all()
+        try:
+            # 先查询Category的ID
+            category = self.session.query(Category.id)\
+                .filter(Category.name == category_name)\
+                .first()
+            if not category:
+                return []
+            
+            # 再查询关联的ClipboardItem
+            result = self.session.query(ClipboardItem.id, ClipboardItem.content, ClipboardItem.content_type,
+                                      ClipboardItem.created_at, ClipboardItem.device_id, ClipboardItem.category_id)\
+                .filter(ClipboardItem.category_id == category.id)\
+                .order_by(ClipboardItem.id.desc())\
+                .all()
+            return [ClipboardItem(
+                id=row.id,
+                content=row.content,
+                content_type=row.content_type,
+                created_at=row.created_at,
+                device_id=row.device_id,
+                category_id=row.category_id
+            ) for row in result]
+        except Exception as e:
+            logger.error(f"按分类获取剪贴板记录时出错: {str(e)}")
+            return []
