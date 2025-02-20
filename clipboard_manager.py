@@ -79,6 +79,13 @@ class ClipboardMonitor(QObject):
         if mime_data.hasImage():
             image = mime_data.imageData()
             if isinstance(image, QImage):
+                # 保存图片到指定目录
+                save_dir = 'clipboard_images'
+                os.makedirs(save_dir, exist_ok=True)
+                file_name = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+                save_path = os.path.join(save_dir, file_name)
+                image.save(save_path)
+                return save_path, ContentType.IMAGE
                 # 将图片转换为base64字符串
                 temp_path = 'temp_image.png'
                 image.save(temp_path)
@@ -110,17 +117,32 @@ class ClipboardMonitor(QObject):
 
     def _categorize_content(self, content: str, content_type: ContentType) -> Optional[Category]:
         """智能分类内容"""
-        # 根据内容类型和关键词进行分类
+        # 首先根据内容类型进行分类
+        type_based_categories = {
+            ContentType.URL: 'URLs',
+            ContentType.CODE: '代码片段',
+            ContentType.IMAGE: '图片'
+        }
+
+        if content_type in type_based_categories:
+            category_name = type_based_categories[content_type]
+            category = self.session.query(Category).filter(Category.name == category_name).first()
+            if not category:
+                category = Category(name=category_name)
+                self.session.add(category)
+                self.session.commit()
+            return category
+
+        # 然后根据内容关键词进行分类
         categories = {
-            'URLs': ['http://', 'https://', 'www.'],
-            '代码片段': ['def', 'class', 'function', 'import'],
-            '文档': ['.doc', '.pdf', '.txt', '.md'],
-            '图片': ['.jpg', '.png', '.gif', '.svg']
+            '文档': ['.doc', '.pdf', '.txt', '.md', '.docx', '.xlsx', '.ppt'],
+            '代码片段': ['def ', 'class ', 'function', 'import', 'var ', 'let ', 'const '],
+            'URLs': ['http://', 'https://', 'www.', '.com', '.org', '.net'],
+            '图片': ['.jpg', '.png', '.gif', '.svg', '.bmp', '.webp']
         }
 
         for category_name, keywords in categories.items():
-            if any(keyword in content.lower() for keyword in keywords):
-                # 检查分类是否已存在
+            if any(keyword.lower() in content.lower() for keyword in keywords):
                 category = self.session.query(Category).filter(Category.name == category_name).first()
                 if not category:
                     category = Category(name=category_name)

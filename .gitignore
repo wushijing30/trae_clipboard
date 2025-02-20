@@ -31,4 +31,7 @@ Thumbs.db
 *~
 
 # 数据库文件
-clipboard.db
+clipboards.db
+
+# 图片文件
+clipboard_images/

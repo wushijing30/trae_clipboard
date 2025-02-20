@@ -21,7 +21,7 @@ class ClipboardManager(QMainWindow):
         
         # 初始化数据库
         logger.info("初始化数据库连接")
-        engine = init_db('sqlite:///clipboard.db')
+        engine = init_db('sqlite:///clipboards.db')
         Session = sessionmaker(bind=engine)
         self.session = Session()
         
