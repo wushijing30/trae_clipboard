@@ -168,16 +168,9 @@ class ClipboardHistoryWidget(QWidget):
         logger.info("加载剪贴板历史记录")
         items = self.monitor.get_history()
         self.history_list.clear()
-        # 按照置顶状态和最后访问时间排序
-        pinned_items = sorted([item for item in items if item.is_pinned],
-                            key=lambda x: x.last_accessed, reverse=True)
-        unpinned_items = sorted([item for item in items if not item.is_pinned],
-                              key=lambda x: x.created_at, reverse=True)
         
-        # 先添加置顶项，再添加未置顶项
-        for item in pinned_items:
-            self._add_history_item(item)
-        for item in unpinned_items:
+        # 直接使用已排序的列表
+        for item in items:
             self._add_history_item(item)
 
         # 更新分类列表
