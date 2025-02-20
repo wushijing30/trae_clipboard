@@ -35,3 +35,8 @@ clipboards.db
 
 # 图片文件
 clipboard_images/
+
+# 打包相关文件
+build/
+dist/
+*.spec
