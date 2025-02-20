@@ -111,10 +111,36 @@ class ClipboardHistoryWidget(QWidget):
         self.search_box.setMinimumHeight(36)
         layout.addWidget(self.search_box)
 
+        # 创建顶部布局，包含分类选择器和清除全部按钮
+        top_layout = QHBoxLayout()
+        
         # 创建分类选择器
         self.category_combo = QComboBox()
         self.category_combo.addItem('全部')
-        layout.addWidget(self.category_combo)
+        top_layout.addWidget(self.category_combo)
+        
+        # 创建清除全部按钮
+        self.clear_all_btn = QPushButton('清除全部')
+        self.clear_all_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #dc3545;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                padding: 8px 16px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #c82333;
+            }
+            QPushButton:pressed {
+                background-color: #bd2130;
+            }
+        """)
+        self.clear_all_btn.clicked.connect(self.confirm_clear_all)
+        top_layout.addWidget(self.clear_all_btn)
+        
+        layout.addLayout(top_layout)
 
         # 创建选项卡
         self.tab_widget = QTabWidget()
@@ -325,3 +351,18 @@ class ClipboardHistoryWidget(QWidget):
             logger.info(f"{'置顶' if item.is_pinned else '取消置顶'}记录: {item_id}")
             # 重新加载列表以更新显示顺序
             self.load_history()
+
+    def confirm_clear_all(self):
+        """确认清除所有历史记录"""
+        from PyQt6.QtWidgets import QMessageBox
+        reply = QMessageBox.question(
+            self,
+            '确认清除',
+            '确定要清除所有历史记录吗？此操作不可恢复。',
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No
+        )
+        
+        if reply == QMessageBox.StandardButton.Yes:
+            self.monitor.clear_all_history()
+            self.load_history()  # 刷新列表显示

@@ -217,3 +217,14 @@ class ClipboardMonitor(QObject):
         except Exception as e:
             logger.error(f"删除剪贴板记录时出错: {str(e)}")
             return False
+    def clear_all_history(self):
+        """清空所有剪贴板历史记录"""
+        try:
+            logger.info("正在清空所有剪贴板历史记录")
+            self.session.query(ClipboardItem).delete()
+            self.session.commit()
+            logger.info("已成功清空所有剪贴板历史记录")
+        except Exception as e:
+            logger.error(f"清空历史记录时出错: {str(e)}")
+            self.session.rollback()
+            return False
