@@ -153,12 +153,25 @@ class ClipboardMonitor(QObject):
         """获取剪贴板历史记录"""
         try:
             logger.info(f"获取最近 {limit} 条历史记录")
-            result = self.session.query(ClipboardItem.id, ClipboardItem.content, ClipboardItem.content_type,
+            # 先获取置顶项
+            pinned_items = self.session.query(ClipboardItem.id, ClipboardItem.content, ClipboardItem.content_type,
                                       ClipboardItem.created_at, ClipboardItem.device_id, ClipboardItem.category_id,
                                       ClipboardItem.is_pinned, ClipboardItem.last_accessed)\
-                .order_by(ClipboardItem.id.desc())\
+                .filter(ClipboardItem.is_pinned == True)\
+                .order_by(ClipboardItem.last_accessed.desc())\
+                .all()
+            
+            # 再获取非置顶项
+            unpinned_items = self.session.query(ClipboardItem.id, ClipboardItem.content, ClipboardItem.content_type,
+                                      ClipboardItem.created_at, ClipboardItem.device_id, ClipboardItem.category_id,
+                                      ClipboardItem.is_pinned, ClipboardItem.last_accessed)\
+                .filter(ClipboardItem.is_pinned == False)\
+                .order_by(ClipboardItem.created_at.desc())\
                 .limit(limit)\
                 .all()
+            
+            # 合并结果
+            result = pinned_items + unpinned_items
             return [ClipboardItem(
                 id=row.id,
                 content=row.content,
@@ -184,12 +197,21 @@ class ClipboardMonitor(QObject):
                 return []
             
             # 再查询关联的ClipboardItem
-            result = self.session.query(ClipboardItem.id, ClipboardItem.content, ClipboardItem.content_type,
-                                      ClipboardItem.created_at, ClipboardItem.device_id, ClipboardItem.category_id,
-                                      ClipboardItem.is_pinned, ClipboardItem.last_accessed)\
+            # 先获取置顶项
+            pinned_items = self.session.query(ClipboardItem)\
                 .filter(ClipboardItem.category_id == category.id)\
-                .order_by(ClipboardItem.id.desc())\
+                .filter(ClipboardItem.is_pinned == True)\
+                .order_by(ClipboardItem.last_accessed.desc())\
                 .all()
+            
+            # 再获取非置顶项
+            unpinned_items = self.session.query(ClipboardItem)\
+                .filter(ClipboardItem.category_id == category.id)\
+                .filter(ClipboardItem.is_pinned == False)\
+                .order_by(ClipboardItem.created_at.desc())\
+                .all()
+            
+            result = pinned_items + unpinned_items
             return [ClipboardItem(
                 id=row.id,
                 content=row.content,

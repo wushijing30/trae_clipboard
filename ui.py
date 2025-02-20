@@ -172,7 +172,7 @@ class ClipboardHistoryWidget(QWidget):
         pinned_items = sorted([item for item in items if item.is_pinned],
                             key=lambda x: x.last_accessed, reverse=True)
         unpinned_items = sorted([item for item in items if not item.is_pinned],
-                              key=lambda x: x.last_accessed, reverse=True)
+                              key=lambda x: x.created_at, reverse=True)
         
         # 先添加置顶项，再添加未置顶项
         for item in pinned_items:
@@ -282,8 +282,8 @@ class ClipboardHistoryWidget(QWidget):
 
     @pyqtSlot(ClipboardItem)
     def on_clipboard_changed(self, item: ClipboardItem):
-        # 处理剪贴板内容变化
-        self._add_history_item(item)
+        # 重新加载历史记录
+        self.load_history()
         self._update_categories()
 
     def copy_item(self, item_id):
