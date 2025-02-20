@@ -184,3 +184,17 @@ class ClipboardMonitor(QObject):
         except Exception as e:
             logger.error(f"按分类获取剪贴板记录时出错: {str(e)}")
             return []
+            
+    def delete_item(self, item_id: int) -> bool:
+        """删除指定的剪贴板记录"""
+        try:
+            item = self.session.query(ClipboardItem).filter(ClipboardItem.id == item_id).first()
+            if item:
+                self.session.delete(item)
+                self.session.commit()
+                logger.info(f"已从数据库中删除记录: {item_id}")
+                return True
+            return False
+        except Exception as e:
+            logger.error(f"删除剪贴板记录时出错: {str(e)}")
+            return False

@@ -74,6 +74,7 @@ class ClipboardHistoryWidget(QWidget):
     def _add_history_item(self, item: ClipboardItem):
         # 创建列表项
         list_item = QListWidgetItem()
+        list_item.setData(Qt.ItemDataRole.UserRole, item.id)  # 存储记录ID
         widget = QWidget()
         layout = QVBoxLayout(widget)
 
@@ -147,11 +148,23 @@ class ClipboardHistoryWidget(QWidget):
     def delete_selected_item(self):
         # 删除选中的记录
         current_item = self.history_list.currentItem()
-        if current_item:
+        if not current_item:
+            logger.warning("未选中任何项目")
+            return
+
+        # 获取记录ID
+        item_id = current_item.data(Qt.ItemDataRole.UserRole)
+        if item_id is None:
+            logger.warning("未找到记录ID")
+            return
+
+        # 删除记录
+        if self.monitor.delete_item(item_id):
+            # 从UI列表中移除
             self.history_list.takeItem(self.history_list.row(current_item))
             logger.info("已删除选中的历史记录")
         else:
-            logger.warning("未选中任何项目")
+            logger.warning("删除记录失败")
 
     def filter_history(self, text: str):
         # 根据搜索文本过滤历史记录
