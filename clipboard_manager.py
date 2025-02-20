@@ -77,7 +77,14 @@ class ClipboardMonitor(QObject):
 
         except Exception as e:
             logger.error(f"处理剪贴板变化时出错: {str(e)}")
-
+    def get_item_by_id(self, item_id: int) -> Optional[ClipboardItem]:
+        """根据ID获取剪贴板记录"""
+        try:
+            item = self.session.query(ClipboardItem).filter(ClipboardItem.id == item_id).first()
+            return item
+        except Exception as e:
+            logger.error(f"获取剪贴板记录时出错: {str(e)}")
+            return None
     def _get_clipboard_content(self) -> tuple[str, ContentType]:
         """获取剪贴板内容和类型"""
         mime_data = self.clipboard.mimeData()
