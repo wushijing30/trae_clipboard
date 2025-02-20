@@ -1,8 +1,8 @@
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QListWidget,
                              QListWidgetItem, QPushButton, QLabel, QComboBox,
                              QTabWidget, QSplitter, QLineEdit)
-from PyQt6.QtCore import Qt, pyqtSlot
-from PyQt6.QtGui import QClipboard
+from PyQt6.QtCore import Qt, pyqtSlot, QSize
+from PyQt6.QtGui import QClipboard, QIcon
 from loguru import logger
 from datetime import datetime
 
@@ -21,10 +21,94 @@ class ClipboardHistoryWidget(QWidget):
 
     def setup_ui(self):
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(20, 20, 20, 20)  # 增加边距
+        layout.setSpacing(15)  # 增加组件间距
+
+        # 设置窗口样式
+        self.setStyleSheet("""
+            QWidget {
+                background-color: #ffffff;
+                font-family: 'Microsoft YaHei UI', sans-serif;
+            }
+            QLineEdit {
+                padding: 8px 12px;
+                border: 1px solid #e0e0e0;
+                border-radius: 8px;
+                background-color: #f5f5f5;
+                font-size: 14px;
+            }
+            QLineEdit:focus {
+                border: 2px solid #0078d4;
+                background-color: #ffffff;
+            }
+            QComboBox {
+                padding: 8px 12px;
+                border: 1px solid #e0e0e0;
+                border-radius: 8px;
+                background-color: #f5f5f5;
+                font-size: 14px;
+            }
+            QComboBox:hover {
+                border: 1px solid #0078d4;
+            }
+            QComboBox::drop-down {
+                border: none;
+            }
+            QListWidget {
+                border: 1px solid #e0e0e0;
+                border-radius: 10px;
+                padding: 5px;
+                background-color: #ffffff;
+            }
+            QListWidget::item {
+                border-radius: 8px;
+                margin: 3px;
+                padding: 5px;
+            }
+            QListWidget::item:hover {
+                background-color: #f0f0f0;
+            }
+            QPushButton {
+                border: none;
+                border-radius: 6px;
+                padding: 6px;
+                background-color: #f5f5f5;
+            }
+            QPushButton:hover {
+                background-color: #e0e0e0;
+            }
+            QTabWidget::pane {
+                border: 1px solid #e0e0e0;
+                border-radius: 10px;
+                top: -1px;
+                background-color: #ffffff;
+            }
+            QTabBar::tab {
+                padding: 8px 16px;
+                margin-right: 4px;
+                border-top-left-radius: 6px;
+                border-top-right-radius: 6px;
+                background-color: #e7f5ff;
+                color: #495057;
+                border: 1px solid #e0e0e0;
+                border-bottom: none;
+            }
+            QTabBar::tab:selected {
+                background-color: #ffffff;
+                border: 1px solid #e0e0e0;
+                border-bottom: none;
+                color: #228be6;
+                font-weight: bold;
+            }
+            QTabBar::tab:hover {
+                background-color: #d0ebff;
+            }
+        """)
 
         # 创建搜索框
         self.search_box = QLineEdit()
         self.search_box.setPlaceholderText('搜索历史记录...')
+        self.search_box.setMinimumHeight(36)
         layout.addWidget(self.search_box)
 
         # 创建分类选择器
@@ -105,22 +189,26 @@ class ClipboardHistoryWidget(QWidget):
         
         # 创建按钮区域
         button_widget = QWidget()
-        button_layout = QVBoxLayout(button_widget)
+        button_layout = QHBoxLayout(button_widget)  # 改为水平布局
         
         # 添加操作按钮
-        copy_btn = QPushButton('复制')
-        pin_btn = QPushButton('取消置顶' if item.is_pinned else '置顶')
-        delete_btn = QPushButton('删除')
+        copy_btn = QPushButton()
+        copy_btn.setIcon(QIcon('icons/icons8-copy-48.png'))
+        pin_btn = QPushButton()
+        pin_btn.setIcon(QIcon('icons/icons8-unpin-100.png' if item.is_pinned else 'icons/icons8-pin-48.png'))
+        delete_btn = QPushButton()
+        delete_btn.setIcon(QIcon('icons/icons8-delete-button-48.png'))
         
         # 设置按钮样式和大小
         for btn in [copy_btn, pin_btn, delete_btn]:
-            btn.setFixedWidth(50)
-            btn.setStyleSheet('padding: 2px;')
+            btn.setFixedSize(32, 32)
+            btn.setStyleSheet('padding: 4px;')
+            btn.setIconSize(btn.size() - QSize(8, 8))
         
         button_layout.addWidget(copy_btn)
         button_layout.addWidget(pin_btn)
         button_layout.addWidget(delete_btn)
-        button_layout.setSpacing(2)
+        button_layout.setSpacing(4)  # 增加按钮之间的间距
         
         # 连接按钮信号
         item_id = item.id

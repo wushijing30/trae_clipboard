@@ -18,7 +18,47 @@ class ClipboardManager(QMainWindow):
         logger.info("初始化智能剪贴板应用")
         self.setWindowTitle('智能剪贴板')
         self.setGeometry(100, 100, 800, 600)
-        
+        self.setStyleSheet("""
+            QMainWindow, QWidget {
+                background: #ffffff;
+            }
+            QTabWidget::pane {
+                background: #f5f5f5;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+            }
+            QTabBar::tab {
+                background: #e0e0e0;
+                padding: 8px 12px;
+                margin: 2px;
+                border: 1px solid #ccc;
+                border-radius: 4px;
+            }
+            QTabBar::tab:selected {
+                background: #ffffff;
+                border-bottom-color: #ffffff;
+            }
+            QScrollBar:vertical {
+                border: none;
+                background: #f0f0f0;
+                width: 8px;
+                margin: 0px;
+            }
+            QScrollBar::handle:vertical {
+                background: #c0c0c0;
+                min-height: 30px;
+                border-radius: 4px;
+            }
+            QScrollBar::handle:vertical:hover {
+                background: #a0a0a0;
+            }
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+                height: 0px;
+            }
+            QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
+                background: none;
+            }
+        """)
         # 设置窗口图标
         icon = QIcon('icons/icons8-clipboard-48.png')
         self.setWindowIcon(icon)
@@ -45,6 +85,7 @@ class ClipboardManager(QMainWindow):
         # 创建并设置剪贴板历史记录组件
         self.history_widget = ClipboardHistoryWidget(self.clipboard, self.monitor)
         self.setCentralWidget(self.history_widget)
+
     def setup_tray(self):
         # 创建系统托盘图标
         self.tray_icon = QSystemTrayIcon(self)
