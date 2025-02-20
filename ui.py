@@ -142,6 +142,7 @@ class ClipboardHistoryWidget(QWidget):
         if widget:
             content_label = widget.findChild(QLabel)
             if content_label:
+                self.monitor.is_copying_selected = True  # 设置标记
                 self.clipboard.setText(content_label.text())
                 logger.info("已复制选中内容到剪贴板")
 

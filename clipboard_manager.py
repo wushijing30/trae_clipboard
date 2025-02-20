@@ -21,6 +21,7 @@ class ClipboardMonitor(QObject):
         self.clipboard = clipboard
         self.session = session
         self.device_id = self._get_device_id()
+        self.is_copying_selected = False  # 添加标记
         self._setup_clipboard_monitoring()
 
     def _get_device_id(self) -> str:
@@ -42,6 +43,11 @@ class ClipboardMonitor(QObject):
     def _handle_clipboard_change(self):
         """处理剪贴板内容变化"""
         try:
+            # 如果是通过复制选中项触发的，跳过处理
+            if self.is_copying_selected:
+                self.is_copying_selected = False  # 重置标记
+                return
+
             content, content_type = self._get_clipboard_content()
             if not content:
                 return
