@@ -147,7 +147,8 @@ class ClipboardMonitor(QObject):
         try:
             logger.info(f"获取最近 {limit} 条历史记录")
             result = self.session.query(ClipboardItem.id, ClipboardItem.content, ClipboardItem.content_type,
-                                      ClipboardItem.created_at, ClipboardItem.device_id, ClipboardItem.category_id)\
+                                      ClipboardItem.created_at, ClipboardItem.device_id, ClipboardItem.category_id,
+                                      ClipboardItem.is_pinned, ClipboardItem.last_accessed)\
                 .order_by(ClipboardItem.id.desc())\
                 .limit(limit)\
                 .all()
@@ -157,7 +158,9 @@ class ClipboardMonitor(QObject):
                 content_type=row.content_type,
                 created_at=row.created_at,
                 device_id=row.device_id,
-                category_id=row.category_id
+                category_id=row.category_id,
+                is_pinned=row.is_pinned,
+                last_accessed=row.last_accessed
             ) for row in result]
         except Exception as e:
             logger.error(f"获取历史记录时出错: {str(e)}")
@@ -175,7 +178,8 @@ class ClipboardMonitor(QObject):
             
             # 再查询关联的ClipboardItem
             result = self.session.query(ClipboardItem.id, ClipboardItem.content, ClipboardItem.content_type,
-                                      ClipboardItem.created_at, ClipboardItem.device_id, ClipboardItem.category_id)\
+                                      ClipboardItem.created_at, ClipboardItem.device_id, ClipboardItem.category_id,
+                                      ClipboardItem.is_pinned, ClipboardItem.last_accessed)\
                 .filter(ClipboardItem.category_id == category.id)\
                 .order_by(ClipboardItem.id.desc())\
                 .all()
@@ -185,7 +189,9 @@ class ClipboardMonitor(QObject):
                 content_type=row.content_type,
                 created_at=row.created_at,
                 device_id=row.device_id,
-                category_id=row.category_id
+                category_id=row.category_id,
+                is_pinned=row.is_pinned,
+                last_accessed=row.last_accessed
             ) for row in result]
         except Exception as e:
             logger.error(f"按分类获取剪贴板记录时出错: {str(e)}")

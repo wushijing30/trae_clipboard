@@ -4,6 +4,7 @@ from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QListWidget,
 from PyQt6.QtCore import Qt, pyqtSlot
 from PyQt6.QtGui import QClipboard
 from loguru import logger
+from datetime import datetime
 
 from models import ClipboardItem, Category
 from clipboard_manager import ClipboardMonitor
@@ -47,8 +48,10 @@ class ClipboardHistoryWidget(QWidget):
         # 操作按钮
         button_layout = QHBoxLayout()
         self.copy_btn = QPushButton('复制选中项')
+        self.pin_btn = QPushButton('置顶')
         self.delete_btn = QPushButton('删除')
         button_layout.addWidget(self.copy_btn)
+        button_layout.addWidget(self.pin_btn)
         button_layout.addWidget(self.delete_btn)
         layout.addLayout(button_layout)
 
@@ -56,6 +59,7 @@ class ClipboardHistoryWidget(QWidget):
         # 连接信号和槽
         self.monitor.content_changed.connect(self.on_clipboard_changed)
         self.copy_btn.clicked.connect(self.copy_selected_item)
+        self.pin_btn.clicked.connect(self.pin_selected_item)
         self.delete_btn.clicked.connect(self.delete_selected_item)
         self.search_box.textChanged.connect(self.filter_history)
         self.category_combo.currentTextChanged.connect(self.filter_by_category)
@@ -65,7 +69,16 @@ class ClipboardHistoryWidget(QWidget):
         logger.info("加载剪贴板历史记录")
         items = self.monitor.get_history()
         self.history_list.clear()
-        for item in items:
+        # 按照置顶状态和最后访问时间排序
+        pinned_items = sorted([item for item in items if item.is_pinned],
+                            key=lambda x: x.last_accessed, reverse=True)
+        unpinned_items = sorted([item for item in items if not item.is_pinned],
+                              key=lambda x: x.last_accessed, reverse=True)
+        
+        # 先添加置顶项，再添加未置顶项
+        for item in pinned_items:
+            self._add_history_item(item)
+        for item in unpinned_items:
             self._add_history_item(item)
 
         # 更新分类列表
@@ -77,6 +90,10 @@ class ClipboardHistoryWidget(QWidget):
         list_item.setData(Qt.ItemDataRole.UserRole, item.id)  # 存储记录ID
         widget = QWidget()
         layout = QVBoxLayout(widget)
+        
+        # 如果是置顶项，添加置顶标记
+        if item.is_pinned:
+            list_item.setBackground(Qt.GlobalColor.lightGray)  # 置顶项背景色
 
         # 显示内容预览
         content_label = QLabel(self._get_preview_text(item))
@@ -93,7 +110,7 @@ class ClipboardHistoryWidget(QWidget):
         widget.setLayout(layout)
         list_item.setSizeHint(widget.sizeHint())
         
-        self.history_list.insertItem(0, list_item)
+        self.history_list.addItem(list_item)
         self.history_list.setItemWidget(list_item, widget)
 
     def _get_preview_text(self, item: ClipboardItem) -> str:
@@ -191,5 +208,34 @@ class ClipboardHistoryWidget(QWidget):
         else:
             items = self.monitor.get_by_category(category_name)
             self.history_list.clear()
-            for item in items:
+            # 分类过滤时也保持置顶项在前
+            pinned_items = [item for item in items if item.is_pinned]
+            unpinned_items = [item for item in items if not item.is_pinned]
+            
+            for item in pinned_items:
                 self._add_history_item(item)
+            for item in unpinned_items:
+                self._add_history_item(item)
+                
+    def pin_selected_item(self):
+        # 置顶或取消置顶选中的记录
+        current_item = self.history_list.currentItem()
+        if not current_item:
+            logger.warning("未选中任何项目")
+            return
+
+        # 获取记录ID
+        item_id = current_item.data(Qt.ItemDataRole.UserRole)
+        if item_id is None:
+            logger.warning("未找到记录ID")
+            return
+
+        # 更新置顶状态和最后访问时间
+        item = self.monitor.session.query(ClipboardItem).get(item_id)
+        if item:
+            item.is_pinned = not item.is_pinned
+            item.last_accessed = datetime.now()
+            self.monitor.session.commit()
+            logger.info(f"{'置顶' if item.is_pinned else '取消置顶'}记录: {item_id}")
+            # 重新加载列表以更新显示顺序
+            self.load_history()
