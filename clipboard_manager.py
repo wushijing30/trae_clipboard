@@ -114,14 +114,15 @@ class ClipboardMonitor(QObject):
             'var ', 'let ', 'const ', '</', '/>'
         ]
         return any(indicator in text for indicator in code_indicators)
-
     def _categorize_content(self, content: str, content_type: ContentType) -> Optional[Category]:
         """智能分类内容"""
-        # 首先根据内容类型进行分类
+        # 根据内容类型进行分类
         type_based_categories = {
             ContentType.URL: 'URLs',
             ContentType.CODE: '代码片段',
-            ContentType.IMAGE: '图片'
+            ContentType.IMAGE: '图片',
+            ContentType.TEXT: '文本',
+            ContentType.OTHER: '其他'
         }
 
         if content_type in type_based_categories:
@@ -132,23 +133,6 @@ class ClipboardMonitor(QObject):
                 self.session.add(category)
                 self.session.commit()
             return category
-
-        # 然后根据内容关键词进行分类
-        categories = {
-            '文档': ['.doc', '.pdf', '.txt', '.md', '.docx', '.xlsx', '.ppt'],
-            '代码片段': ['def ', 'class ', 'function', 'import', 'var ', 'let ', 'const '],
-            'URLs': ['http://', 'https://', 'www.', '.com', '.org', '.net'],
-            '图片': ['.jpg', '.png', '.gif', '.svg', '.bmp', '.webp']
-        }
-
-        for category_name, keywords in categories.items():
-            if any(keyword.lower() in content.lower() for keyword in keywords):
-                category = self.session.query(Category).filter(Category.name == category_name).first()
-                if not category:
-                    category = Category(name=category_name)
-                    self.session.add(category)
-                    self.session.commit()
-                return category
 
         return None
 

@@ -19,9 +19,13 @@ class ClipboardManager(QMainWindow):
         self.setWindowTitle('智能剪贴板')
         self.setGeometry(100, 100, 800, 600)
         
+        # 设置窗口图标
+        icon = QIcon('icons/icons8-clipboard-48.png')
+        self.setWindowIcon(icon)
+        
         # 初始化数据库
         logger.info("初始化数据库连接")
-        engine = init_db('sqlite:///clipboards.db')
+        engine = init_db('sqlite:///clipboards.db', echo=True)
         Session = sessionmaker(bind=engine)
         self.session = Session()
         
@@ -41,11 +45,11 @@ class ClipboardManager(QMainWindow):
         # 创建并设置剪贴板历史记录组件
         self.history_widget = ClipboardHistoryWidget(self.clipboard, self.monitor)
         self.setCentralWidget(self.history_widget)
-
     def setup_tray(self):
         # 创建系统托盘图标
         self.tray_icon = QSystemTrayIcon(self)
-        self.tray_icon.setToolTip('智能剪贴板')
+        icon = QIcon('icons/icons8-clipboard-48.png')
+        self.tray_icon.setIcon(icon)
 
         # 创建托盘菜单
         tray_menu = QMenu()
@@ -58,8 +62,14 @@ class ClipboardManager(QMainWindow):
         tray_menu.addAction(quit_action)
 
         self.tray_icon.setContextMenu(tray_menu)
+        # 添加托盘图标的activated信号处理
+        self.tray_icon.activated.connect(self._handle_tray_activation)
         self.tray_icon.show()
 
+    def _handle_tray_activation(self, reason):
+        # 当用户左键单击托盘图标时显示窗口
+        if reason == QSystemTrayIcon.ActivationReason.Trigger:
+            self.show()
     def closeEvent(self, event):
         # 关闭窗口时最小化到系统托盘
         logger.info("窗口最小化到系统托盘")

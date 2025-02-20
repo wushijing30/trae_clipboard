@@ -32,7 +32,8 @@ class ClipboardItem(Base):
     category_id = Column(Integer, ForeignKey('categories.id'))
     category = relationship('Category', back_populates='items', lazy='joined')
 
-def init_db(url):
-    engine = create_engine(url)
+def init_db(db_url, echo=False):
+    """初始化数据库"""
+    engine = create_engine(db_url, echo=echo)
     Base.metadata.create_all(engine)
     return engine
